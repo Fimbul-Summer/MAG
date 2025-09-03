@@ -1,0 +1,6 @@
+
+
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+{?x :super-class ?y. ?y a ?class} => { ?x a ?class}.
+{?x :super-class ?y. ?u a ?x} => { ?u a ?y}.

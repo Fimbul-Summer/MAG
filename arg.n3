@@ -1,0 +1,4 @@
+@prefix ns1: <http://semex.sigmanoise.com/r3/life-sim#> .
+
+ns1:arg ns1:is ns1:加点 .
+

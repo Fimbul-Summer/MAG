@@ -1,0 +1,14 @@
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
+:self :智力 0;
+    :体质 0;
+    :颜值 0;
+    :家境 0;
+    :可分配点数 20;
+    :可选天赋数 3;
+    :年龄 0;
+.
+
+:self :拥有物品 :苹果, :小红的棒棒糖.
+

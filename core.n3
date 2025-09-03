@@ -1,0 +1,280 @@
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
+:self :智力 0;
+    :体力 0;
+    :颜值 0;
+    :家境 0;
+    :可分配点数 20;
+.
+
+:self :拥有物品 :苹果, :小红的棒棒糖.
+
+{:self :智力 ?x . ?x math:greaterThan 7} => {:self a :高智商}.
+
+
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
+@prefix diff: <http://www.w3.org/2004/delta#>.
+
+
+
+
+# 动作的效果是一个delta
+
+:加点
+    a   :动作;
+    :参数 (:加点属性 :加点数值); # 可以将具体动作看作类，则它的参数就是其slot，实例就是具体的动作实例。
+    :前提   {:self :可分配点数 ?y. 
+            ?y math:greaterThan 0 };
+    # :后果 {
+    #     {:当前动作 :加点属性 ?p; :加点数值 ?v. :self ?p ?v2. (?v ?v2) math:sum ?v3 } 
+    #         diff:replacement {:self ?p ?v3};
+    #         #diff:deletion {:self ?p ?v2.}.
+    # }
+.
+
+# 理论上，应该是动作实例而不是动作类对应一个后果的diff图。因此应该使用规则，说明如何从动作类型和参数计算具体的动作实例的diff. 
+{
+    :当前动作 a :加点.
+    :当前动作 :加点属性 ?prop.
+    :当前动作 :加点数值 ?v. 
+} => {
+    :当前动作 :后果 
+    {
+        @forAll.{:self ?prop ?v2. (?v2 ?v) math:sum ?v3 } diff:replacement {:self ?prop ?v3}
+    }
+}.
+
+
+# 对于无参数的动作类，动作实例的后果可以从类那里继承。
+{
+    :当前动作 a ?action.
+    ?action :后果 ?y.
+} => { :当前动作 :后果 ?y}.
+
+
+
+
+:加点属性 :取值范围 (:智力 :颜值 :体质 :家境). # 取值范围相当于 k:range
+
+:加点数值 :取值范围 xsd:integer. # 取值范围，相当于 k:constr-range-belongs
+
+#:加点点数 :取值约束条件 (?value {:self :可分配点数 ?y. ?value math:lessThan ?y}) # :取值约束条件 可以看作该动作类的 slot上的constraint
+{
+    :当前动作 a :加点. 
+    :当前动作 :加点数值 ?value. 
+    :self :可分配点数 ?y. 
+    ?value math:greaterThan ?y. 
+    :self :可分配点数 ?z.
+    ("加点不能超出可分配点数。" "当前的可分配点数为" ?z ) string:concatenation ?reason.
+} => {:执行动作 a :Failed; :reason ?reason}.
+
+:吃 a :动作 ;
+    :描述 "你吃下了<<object>>" ;
+    :参数 (:吃的对象);
+    :前提 {
+        :self :拥有物品 ?object .
+        ?object a :食物.
+    } ;
+    :后果 {
+        {:当前动作 :吃的对象 ?v  } 
+            diff:deletion {:self :拥有物品 ?v.}.
+    }
+.
+
+{ ?SCOPE e:findall (
+        ?value
+        {:self :拥有物品 ?value. ?value a :食物}
+        ?values
+    ) 
+} => {:吃的对象 :取值范围 ?values}. # 自动推出列表
+
+
+
+
+
+
+:服用仙丹
+    a   :动作;
+    :描述 "你服下了仙丹";
+    :前提 {:self :拥有物品 :仙丹 };
+    :后果 
+    {
+        {:self :拥有状态 :患病 }
+            diff:deletion {:self :拥有状态 :患病 }.
+    },
+    {
+        {?scope e:fail {:self :拥有状态 :患病}. :self :体质 ?x. (?x 2) math:sum ?y }
+            diff:replacement {:self :体质 ?y}.
+    }
+.
+
+:揍ta
+    a   :动作;
+    :参数 (:揍的对象);
+    :描述 "你狠狠地揍了ta一拳";
+    :前提 {:self!:体质 math:largerThan 5};
+    :后果 {
+            { :当前动作 :揍的对象 ?obj. ?obj :体质 ?x. (?x 2) math:difference ?y } 
+                diff:replacement {?obj :体质 ?y };
+                #diff:deletion {?obj :体质 ?x }
+        } 
+.
+
+{?scope e:findall (?x {:self :认识的人 ?x} ?y)} => {:揍的对象 :取值范围 ?y}.
+
+{?x a :动作. ?x :参数 ?l. ?y list:in ?l. } => {?y a :动作参数}.
+
+
+
+
+
+
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+
+
+:食物 :super-class :消耗品.
+:消耗品 :super-class :物品.
+:主动物品 :super-class :物品.
+:被动物品 :super-class :物品. 
+
+
+:苹果
+    a :食物;
+.
+
+:仙丹  
+    a :主动物品, :消耗品, :食物;
+    :名称 "仙丹";
+    :描述 "能够瞬间治愈任何疾病";
+.
+
+:红肚兜
+    a :被动物品, :消耗品;
+    :名称 "红肚兜";
+    :描述 "小时候能抵挡一次死亡";
+.
+
+
+:玉佩
+    a :被动物品;
+    :名称 "玉佩";
+    :描述 "有概率抵挡体质降低，每次成功抵挡有概率碎裂";
+.
+
+# :self :拥有物品 :玉佩.
+
+:小红的棒棒糖
+    a :食物;
+    :稀有度 :橙;
+    :描述 "使你拥有的所有的消耗品变成非消耗品";
+.
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+[
+    a :事件;
+    :描述 "今年大丰收，而且你家的菜也涨价了";
+    :前提 {:self :住在农村 true };
+    :后果增量 {:self :家境 1};
+].
+
+:诞生 a :事件;
+    :描述 "你出生了！";
+    :后果 {:self :死亡 false};
+.
+
+:得了肺炎 
+    a :事件;
+    :父事件 :患病;
+    :前提 {:self!:体质 math:lessThan 3 };
+    :后果增量 {:self :体质 -2};
+.
+
+[
+    a :事件;
+    :描述 "刚学会走路，你意外从桌子上跌落";
+    :前提 {:self :年龄 2};
+    :后果增量 {:self :体质 -2};
+].
+
+
+
+#{?x a :事件. :self :年龄 ?y. ?y math:lessThan 10. :self :体质 ?z. ?z math:lessThan 0} => {?x a :小时候的致死事件}.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+:大智若愚
+    :描述 "智力减少3。此后每当你增加智力时，多增加1点";
+.
+
+
+
+:城中高楼
+    a :先天天赋;
+    :名称 "城中高楼";
+    :描述 "你出生在城市";
+    :稀有度 0;
+    :前提 {};
+    :后果 {:self :住在城市 true};
+.
+
+[
+    a :先天天赋;
+    :名称 "乡间微风";
+    :描述 "你出生在农村";
+    :稀有度 0;
+    :后果 {:self :住在农村 true};
+].
+
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+
+
+:年龄 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "年龄";
+.
+
+:性别 a :属性;
+    :取值范围 (:男性 :女性 :双性);
+    :名称 "性别";
+.
+
+:颜值 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "颜值";
+.
+
+:智力 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "智力";
+.
+
+:体质 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "体质";
+.
+
+:家境 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "家境";
+.
+
+:快乐 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "快乐";
+.
+
+:幸运 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "幸运";
+.
+

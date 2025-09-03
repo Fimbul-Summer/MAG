@@ -1,0 +1,7 @@
+# 获取选定动作参数的取值范围.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+{:arg :is ?参数. ?参数 :提示信息 ?x}
+=> {:answer :is ?x}.
+
+

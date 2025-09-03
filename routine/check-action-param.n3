@@ -1,0 +1,12 @@
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+
+{
+    :当前动作 a ?action.
+    ?action :参数 ?list. 
+    ?param list:in ?list.
+    :当前动作 ?param ?value. 
+    ?param :取值范围 ?set. 
+    ?scope e:fail {?value mybuiltin:in ?set}.
+    (?param "的取值是" ?value ",但是期望的取值范围是" ?set ) string:concatenation ?string.
+    
+} => {:result a :Failed; :reason ?string}.

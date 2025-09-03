@@ -1,0 +1,15 @@
+# 获取选定动作的参数。需要绑定 ?当前动作 变量
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+
+
+{   :arg :is ?动作.
+    ?动作 :参数 ?y
+    # ?scope e:findall (
+    #     ?x
+    #     {?动作 :参数 ?x}
+    #     ?y
+    # )
+} => {:answer :is ?y}.
+
+

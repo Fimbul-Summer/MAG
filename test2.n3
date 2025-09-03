@@ -1,0 +1,7 @@
+# Processed by EYE v11.20.9 (2025-08-27)
+# eye --quiet test.n3 --pass-merged --nope --output test2.n3
+
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#>.
+
+
+:hello :wolrd :John.

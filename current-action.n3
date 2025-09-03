@@ -1,0 +1,7 @@
+@prefix ns1: <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ns1:当前动作 a ns1:加点 ;
+    ns1:加点属性 ns1:体质 ;
+    ns1:加点数值 12 .
+

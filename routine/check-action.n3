@@ -1,0 +1,309 @@
+@prefix diff: <http://www.w3.org/2004/delta#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix list: <http://www.w3.org/2000/10/swap/list#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+@prefix ns1: <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix string: <http://www.w3.org/2000/10/swap/string#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ns1:服用仙丹 a ns1:动作 ;
+    ns1:后果 {
+        {
+            ns1:self ns1:拥有状态 ns1:患病 .
+
+        } diff:deletion {
+                ns1:self ns1:拥有状态 ns1:患病 .
+
+            } .
+
+    },
+         {
+        {
+            ?scope e:fail {
+                    ns1:self ns1:拥有状态 ns1:患病 .
+
+                } .
+
+            ns1:self ns1:体质 ?x .
+
+            [] rdf:first ?x ;
+                rdf:rest ( 2 ) ;
+                math:sum ?y .
+
+        } diff:replacement {
+                ns1:self ns1:体质 ?y .
+
+            } .
+
+    } ;
+    ns1:描述 "你服下了仙丹" ;
+    ns1:前提 {
+        ns1:self ns1:拥有物品 ns1:仙丹 .
+
+    } .
+
+ns1:self ns1:体力 0 ;
+    ns1:可分配点数 20 ;
+    ns1:家境 0 ;
+    ns1:拥有物品 ns1:苹果 ;
+    ns1:智力 0 ;
+    ns1:颜值 0 .
+
+ns1:吃 a ns1:动作 ;
+    ns1:参数 ( ns1:吃的对象 ) ;
+    ns1:后果 {
+        {
+            ns1:当前动作 ns1:吃的对象 ?v .
+
+        } diff:deletion {
+                ns1:self ns1:拥有物品 ?v .
+
+            } .
+
+    } ;
+    ns1:描述 "你吃下了<<object>>" ;
+    ns1:前提 {
+        ns1:self ns1:拥有物品 ?object .
+
+        ?object a ns1:食物 .
+
+    } .
+
+ns1:城中高楼 a ns1:先天天赋 ;
+    ns1:前提 {
+    } ;
+    ns1:名称 "城中高楼" ;
+    ns1:后果 {
+        ns1:self ns1:住在城市 true .
+
+    } ;
+    ns1:描述 "你出生在城市" ;
+    ns1:稀有度 0 .
+
+ns1:小红的棒棒糖 a ns1:被动物品 ;
+    ns1:描述 "使你拥有的所有的消耗品变成非消耗品" ;
+    ns1:稀有度 ns1:橙 .
+
+ns1:当前动作 a ns1:加点 ;
+    ns1:加点属性 ns1:体质 ;
+    ns1:加点数值 12 .
+
+{
+    ns1:self ns1:可分配点数 ?y,
+            ?z .
+
+    ns1:当前动作 a ns1:加点 ;
+        ns1:加点数值 ?value .
+
+    ?value math:greaterThan ?y .
+
+    [] rdf:first "加点不能超出可分配点数。" ;
+        rdf:rest ( "当前的可分配点数为" ?z ) ;
+        string:concatenation ?reason .
+
+} => {
+        ns1:执行动作 a ns1:Failed ;
+            ns1:reason ?reason .
+
+    } .
+
+{
+    ns1:self ns1:智力 ?x .
+
+    ?x math:greaterThan 7 .
+
+} => {
+        ns1:self a ns1:高智商 .
+
+    } .
+
+ns1:大智若愚 ns1:描述 "智力减少3。此后每当你增加智力时，多增加1点" .
+
+ns1:揍ta a ns1:动作 ;
+    ns1:参数 ( ns1:揍的对象 ) ;
+    ns1:后果 {
+        {
+            ns1:当前动作 ns1:揍的对象 ?obj .
+
+            ?obj ns1:体质 ?x .
+
+            [] rdf:first ?x ;
+                rdf:rest ( 2 ) ;
+                math:difference ?y .
+
+        } diff:replacement {
+                ?obj ns1:体质 ?y .
+
+            } .
+
+    } ;
+    ns1:描述 "你狠狠地揍了ta一拳" ;
+    ns1:前提 {
+        ns1:self ns1:体质 [ math:largerThan 5 ] .
+
+    } .
+
+{
+    ?SCOPE e:findall ( ?value {
+                ns1:self ns1:拥有物品 ?value .
+
+                ?value a ns1:食物 .
+
+            } ?values ) .
+
+} => {
+        ns1:吃的对象 ns1:取值范围 ?values .
+
+    } .
+
+ns1:玉佩 a ns1:被动物品 ;
+    ns1:名称 "玉佩" ;
+    ns1:描述 "有概率抵挡体质降低，每次成功抵挡有概率碎裂" .
+
+ns1:红肚兜 a ns1:消耗品,
+        ns1:被动物品 ;
+    ns1:名称 "红肚兜" ;
+    ns1:描述 "小时候能抵挡一次死亡" .
+
+{
+    ns1:当前动作 a ?action .
+
+    ?action ns1:后果 ?y .
+
+} => {
+        ns1:当前动作 ns1:后果 ?y .
+
+    } .
+
+{
+    ?scope e:findall ( ?x {
+                ns1:self ns1:认识的人 ?x .
+
+            } ?y ) .
+
+} => {
+        ns1:揍的对象 ns1:取值范围 ?y .
+
+    } .
+
+{
+    ?x a ns1:动作 ;
+        ns1:参数 ?l .
+
+    ?y list:in ?l .
+
+} => {
+        ?y a ns1:动作参数 .
+
+    } .
+
+{
+    ns1:当前动作 a ns1:加点 ;
+        ns1:加点属性 ?prop ;
+        ns1:加点数值 ?v .
+
+} => {
+        ns1:当前动作 ns1:后果 {
+                {
+                    ns1:self ?prop ?v2 .
+
+                    [] rdf:first ?v2 ;
+                        rdf:rest ( ?v ) ;
+                        math:sum ?v3 .
+
+                } diff:replacement {
+                        ns1:self ?prop ?v3 .
+
+                    } .
+
+            } .
+
+    } .
+
+ns1:得了肺炎 a ns1:事件 ;
+    ns1:前提 {
+        ns1:self ns1:体质 [ math:lessThan 3 ] .
+
+    } ;
+    ns1:后果增量 {
+        ns1:self ns1:体质 -2 .
+
+    } ;
+    ns1:父事件 ns1:患病 .
+
+ns1:诞生 a ns1:事件 ;
+    ns1:后果 {
+        ns1:self ns1:死亡 false .
+
+    } ;
+    ns1:描述 "你出生了！" .
+
+ns1:主动物品 ns1:super-class ns1:物品 .
+
+ns1:仙丹 a ns1:主动物品,
+        ns1:消耗品,
+        ns1:食物 ;
+    ns1:名称 "仙丹" ;
+    ns1:描述 "能够瞬间治愈任何疾病" .
+
+ns1:加点属性 a ns1:动作参数 ;
+    ns1:取值范围 ( ns1:智力 ns1:颜值 ns1:体质 ns1:家境 ) .
+
+ns1:加点数值 a ns1:动作参数 ;
+    ns1:取值范围 xsd:integer .
+
+ns1:吃的对象 a ns1:动作参数 ;
+    ns1:取值范围 ( ns1:苹果 ) .
+
+ns1:揍的对象 a ns1:动作参数 ;
+    ns1:取值范围 () .
+
+ns1:苹果 a ns1:食物 .
+
+ns1:加点 a ns1:动作 ;
+    ns1:参数 ( ns1:加点属性 ns1:加点数值 ) ;
+    ns1:前提 {
+        ns1:self ns1:可分配点数 ?y .
+
+        ?y math:greaterThan 0 .
+
+    } .
+
+ns1:消耗品 ns1:super-class ns1:物品 .
+
+ns1:被动物品 ns1:super-class ns1:物品 .
+
+ns1:食物 ns1:super-class ns1:消耗品 .
+
+[] a ns1:事件 ;
+    ns1:前提 {
+        ns1:self ns1:年龄 2 .
+
+    } ;
+    ns1:后果增量 {
+        ns1:self ns1:体质 -2 .
+
+    } ;
+    ns1:描述 "刚学会走路，你意外从桌子上跌落" .
+
+[] a ns1:事件 ;
+    ns1:前提 {
+        ns1:self ns1:住在农村 true .
+
+    } ;
+    ns1:后果增量 {
+        ns1:self ns1:家境 1 .
+
+    } ;
+    ns1:描述 "今年大丰收，而且你家的菜也涨价了" .
+
+[] a ns1:先天天赋 ;
+    ns1:名称 "乡间微风" ;
+    ns1:后果 {
+        ns1:self ns1:住在农村 true .
+
+    } ;
+    ns1:描述 "你出生在农村" ;
+    ns1:稀有度 0 .
+

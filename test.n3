@@ -1,0 +1,63 @@
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#>.
+@prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+
+
+#:s :p ( :o1 :o2 :o3 :o4 :o5 :o6 ).
+#  {:s :p ?l. (?l 3) :random-sample ?x. } => {:answer :is ?x}.
+
+# {?x :distinct-count ?n} <= {?x :type :Set. ?x list:unique ?y. ?y list:length ?n }.
+
+_:has-sampled :is false.
+# 从列表list中随机采样n个对象，得到?x
+{ (?list ?n) :random-sample ?sample2} <=
+{    
+
+    ?list math:memberCount ?len.
+    ?n math:notGreaterThan ?len.
+    (?list ?n) :random-sample-helper ?sample.
+    {_:has-sampled :is false} e:becomes {:_has-sampled :is true}.
+    ?sample :flatten-list ?sample2.
+}.
+
+() :flatten-list ().
+
+{ (?head ?tail)   :flatten-list ?flatlist} <= 
+{
+    #"T3" log:trace  ?head .
+    ?head :flatten-list ?flathead.
+    #"T4" log:trace  ?flathead .
+    ?tail :flatten-list ?flattail.
+    (?flathead ?flattail) list:append ?flatlist.
+
+}.
+{?l :flatten-list (?l)} <= {
+# "T5" log:trace ?l .
+# ?l log:notEqualTo (?y).
+# ?l log:notEqualTo (?y ?y2).
+?l log:rawType log:Other.
+#?scope e:fail {?l log:rawType rdf:List}. 
+# "T6" log:trace  ?l  .
+}.
+
+#{(:o3 (:o2 (:o5 ()))) :flatten-list ?x } => {:flattedlist :Is ?x}.
+
+(?x 0) :random-sample-helper ().
+
+{(?list ?n) :random-sample-helper (?elem ?rest)} <= 
+    {
+        ?n math:greaterThan 0.
+        ?list list:length ?len.
+        (?len) e:random ?idx.
+        ("nth1" ?idx ?list ?elem) log:pro true.
+        ("delete" ?list ?elem ?newlist) log:pro true.
+        (?n -1) math:sum ?n1.
+        (?newlist ?n1) :random-sample-helper ?rest.
+    }.
+
+

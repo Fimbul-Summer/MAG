@@ -1,0 +1,61 @@
+# 似乎本文件无法用--query的方式调用。
+@prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
+
+
+{
+    ?g0  :世界变化 ({} ?insert )
+} <= 
+{
+    #
+    :当前动作 :后果 {?g1 diff:insertion ?g2}.
+    #"T0" log:trace (?g1 ?g2).
+    
+    (?g2 ?g1 ?add-list) log:collectAllIn  ?g0 .  
+    #"T0" log:trace (?add-list).
+    ?add-list log:conjunction ?insert.
+}.
+
+
+{
+    ?g0  :世界变化 (?delete ?insert )
+} <= 
+{
+    #
+    :当前动作 :后果 {?g1 diff:replacement ?g2}.
+    #"T0" log:trace (?g1 ?g2).
+    
+    (?g2 ?g1 ?add-list) log:collectAllIn  ?g0 .  
+    (?g1 ?g1 ?del-list) log:collectAllIn  ?g0 .
+    #"T0" log:trace (?add-list).
+    ?del-list log:conjunction ?delete.
+    ?add-list log:conjunction ?insert.
+}.
+
+
+#从g中删除g2，增加g3.
+{(?g ?g2 ?g3) :graphReplace ?g4} <= { (?g ?g2) e:graphDifference ?g5. ?g4 e:graphPair (?g3 ?g5)  }.
+
+{ ?g  :新世界 ?new-g} <=
+    {
+        #"T0" log:trace (?g).
+       
+        ?g  :世界变化 (?delete ?insert).  #"T1" log:trace ( ?insert ?delete) .
+        (?g ?delete ?insert) :graphReplace  ?new-g.
+    }.
+
+
+# 注意semantics的相对路径是相对于文件。
+{
+    </Users/Shared/code/人生重开模拟器/current-state.n3>  log:semantics  ?g. 
+    "T0" log:trace (?g).
+    ?g :新世界 ?new-g.
+} => {:新世界 :是 ?new-g}.
+#{<./base.n3>  log:semantics  ?g.} => {:旧世界 :是 ?g}.
+
+
+# {:当前动作 :后果 ?y } => {:s :p ?y}.

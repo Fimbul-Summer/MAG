@@ -1,0 +1,48 @@
+
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:临时变量 :super-class :变量. # 临时变量的值在下一个时间步被清除。
+:属性 :super-class :变量.
+
+
+:年龄 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "年龄";
+.
+
+:性别 a :属性;
+    :取值范围 (:男性 :女性 :双性);
+    :名称 "性别";
+.
+
+:颜值 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "颜值";
+.
+
+:智力 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "智力";
+.
+
+:体质 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "体质";
+.
+
+:家境 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "家境";
+.
+
+:快乐 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "快乐";
+.
+
+:幸运 a :属性;
+    :取值范围  xsd:integer;
+    :名称 "幸运";
+.
