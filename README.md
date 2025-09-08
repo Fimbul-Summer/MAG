@@ -9,8 +9,8 @@
 
 ## 一. 安装和使用
 
-需要python环境。
-再根据这里的说明https://github.com/eyereasoner/eye，安装swi-prolog 和 eye。
+需要python环境。\
+再根据[这里的说明](https://github.com/eyereasoner/eye)，安装swi-prolog 和 eye。\
 需要能够熟练使用N3语言，入门可以参考[这里](https://notation3.org)。
 
 ## 二. 项目介绍
