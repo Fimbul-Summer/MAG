@@ -1,0 +1,90 @@
+
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
+@prefix diff: <http://www.w3.org/2004/delta#>.
+
+
+# 对于无参数的动作类，动作实例的直接后果可以从类那里继承。
+{
+    :当前动作 a ?action.
+    ?action :直接后果 ?y.
+} => { :当前动作 :直接后果 ?y}.
+
+
+
+{
+    ?x a :动作;
+        :替换结果 {?s ?p ?o}
+} => {
+        ?x :直接后果 
+        {
+            {?s ?prop ?v } diff:replacement {?s ?prop ?o}
+        }
+}.
+
+
+#:加点点数 :取值约束前提条件 (?value {:self :可分配点数 ?y. ?value math:lessThan ?y}) # :取值约束前提条件 可以看作该动作类的 slot上的constraint
+{
+    :当前动作 a :加点. 
+    :当前动作 :加点数值 ?value. 
+    :self :可分配点数 ?y. 
+    ?value math:greaterThan ?y. 
+    :self :可分配点数 ?z.
+    ("加点不能超出可分配点数。" "当前的可分配点数为" ?z ) string:concatenation ?reason.
+} => {:执行动作 a :Failed; :reason ?reason}.
+
+
+{
+    :当前动作 a :加点.
+    :当前动作 :加点属性 ?prop.
+    :当前动作 :加点数值 ?v. 
+    :self ?prop ?v2.
+    (?v2 ?v ) math:sum ?v3.
+} => {
+    :当前动作 :直接后果 
+    {
+        {:self ?prop ?v2 } diff:replacement {:self ?prop ?v3}
+    }
+
+    # 另一种设计： 计算动作实例的未完全ground的直接后果。
+    # TODO 但是似乎math:sum在diff:repalcement中会匹配失败？ 
+    # {
+    #     {:self ?prop ?v2. (?v2 ?v) math:sum ?v3 } diff:replacement {:self ?prop ?v3}
+    # }
+}.
+
+:抛硬币
+    a   :动作;
+    :前提   true;
+    :参数   ();
+    :描述   "抛一枚硬币";
+    :后果   {
+            { (100) e:random ?x  } diff:insertion { ( {?x math:greaterThan 49} {:看到  :投掷结果 :正面} {:看到  :投掷结果 :反面} ) log:ifThenElseIn ?scope }
+    };
+.
+
+
+:吃 a :动作 ;
+    :描述 "你吃下了<<object>>" ;
+    :参数 (:吃的对象);
+    :前提 {
+        :self :拥有物品 ?object .
+        ?object a :食物.
+    } ;
+    :后果 {
+        {:当前动作 :吃的对象 ?v  } 
+            diff:deletion {:self :拥有物品 ?v.}.
+    }
+.
+
+{ ?SCOPE e:findall (
+        ?value
+        {:self :拥有物品 ?value. ?value a :食物}
+        ?values
+    ) 
+} => {:吃的对象 :取值范围 ?values}. # 自动推出列表

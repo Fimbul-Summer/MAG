@@ -5,13 +5,18 @@
 
 
 {
-    ?x a :动作; :前提 ?y. 
+    ?x a :动作; :条件 ?y. 
     ?SCOPE e:call ?y
 } => {:answer :has ?x}. # 简单版的
+
+{
+    ?x a :动作.
+    ?SCOPE e:fail {?x :条件 ?y}. #没有条件的
+} => {:answer :has ?x}. #
 # {
 #     ?SCOPE e:findall (
 #         ?x 
-#         {?x a :动作; :前提 ?y. ?SCOPE e:call ?y}
+#         {?x a :动作; :条件 ?y. ?SCOPE e:call ?y}
 #         ?z
 #     )
 # }

@@ -5,59 +5,46 @@
 @prefix math: <http://www.w3.org/2000/10/swap/math#>.
 @prefix list: <http://www.w3.org/2000/10/swap/list#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix var: <http://www.w3.org/2000/10/swap/var#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
 
 
+# 选择语句 log:collectAllIn e:findall
 
-#:s :p ( :o1 :o2 :o3 :o4 :o5 :o6 ).
-#  {:s :p ?l. (?l 3) :random-sample ?x. } => {:answer :is ?x}.
+# 用一个图或者一个节点来表示范围
+# { ?scope e:findall (?x {?x a :Thing} ?list) } => {:answer :is ?list}.
 
-# {?x :distinct-count ?n} <= {?x :type :Set. ?x list:unique ?y. ?y list:length ?n }.
+:my-range  :is [
+    :scope var:scope;
+    :select var:x;
+    :where {var:x a :Thing};
+].
 
-_:has-sampled :is false.
-# 从列表list中随机采样n个对象，得到?x
-{ (?list ?n) :random-sample ?sample2} <=
-{    
+# {
+#     :my-range :is ?y. 
+#     ?y :scope ?s1; 
+#         :select ?s2; 
+#         :where ?s3. 
+#     @forAll var:x.
+#     ?s1 e:findall (?s2 ?s3 ?s4)
+# } => {:answer :is ?s4}.
 
-    ?list math:memberCount ?len.
-    ?n math:notGreaterThan ?len.
-    (?list ?n) :random-sample-helper ?sample.
-    {_:has-sampled :is false} e:becomes {:_has-sampled :is true}.
-    ?sample :flatten-list ?sample2.
+# 尝试实现一个py脚本，将图中的形如var:x的转变成?x。 要么就在github上发问。
+
+# 这个脚本无法inline地做到这一点，只能生成一个单独的n3文件。
+{{var:x :p :o} :parse-vars ?x } => {:answer :is ?x}.
+
+
+#{ {var:x :p {:y :q var:o} } log:n3String ?z} => {:n3string :Is ?z}.
+{?x :parse-vars ?r} <= {
+    ?x log:bound true.
+    ?x log:n3String ?str.
+    #("echo '~w' > ~w " ?str "./my_pipe" ) e:format ?command.
+    #("python parse_vars.py '" ?str "' ./my_pipe" ) string:concatenation ?command.
+    ("python parse_vars.py '~w'" ?str) e:format ?command.
+    #"T8" log:trace ( ?command ) .
+    ?command log:shell ?r.
+    #"T8" log:trace ( ?r ) .
+    # ?r log:parsedAsN3 ?y. # parseAsN3无法正确地将?x变成变量，而是变成了空白节点
+
 }.
-
-() :flatten-list ().
-
-{ (?head ?tail)   :flatten-list ?flatlist} <= 
-{
-    #"T3" log:trace  ?head .
-    ?head :flatten-list ?flathead.
-    #"T4" log:trace  ?flathead .
-    ?tail :flatten-list ?flattail.
-    (?flathead ?flattail) list:append ?flatlist.
-
-}.
-{?l :flatten-list (?l)} <= {
-# "T5" log:trace ?l .
-# ?l log:notEqualTo (?y).
-# ?l log:notEqualTo (?y ?y2).
-?l log:rawType log:Other.
-#?scope e:fail {?l log:rawType rdf:List}. 
-# "T6" log:trace  ?l  .
-}.
-
-#{(:o3 (:o2 (:o5 ()))) :flatten-list ?x } => {:flattedlist :Is ?x}.
-
-(?x 0) :random-sample-helper ().
-
-{(?list ?n) :random-sample-helper (?elem ?rest)} <= 
-    {
-        ?n math:greaterThan 0.
-        ?list list:length ?len.
-        (?len) e:random ?idx.
-        ("nth1" ?idx ?list ?elem) log:pro true.
-        ("delete" ?list ?elem ?newlist) log:pro true.
-        (?n -1) math:sum ?n1.
-        (?newlist ?n1) :random-sample-helper ?rest.
-    }.
-
-

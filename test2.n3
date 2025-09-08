@@ -2,6 +2,24 @@
 # eye --quiet test.n3 --pass-merged --nope --output test2.n3
 
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#>.
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#>.
+@prefix var: <http://www.w3.org/2000/10/swap/var#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+{{?x :q {?x :p :o}} e:labelvars ?y} => {:anwer :is ?y}.
+{?x log:uri ?y} => {:raw :is ?y}.
 
 
-:hello :wolrd :John.
+{"@prefix ns1: <http://semex.sigmanoise.com/r3/life-sim#> .@forAll ns1:x. \n\n ns1:x ns1:p ns1:o .\n\n\n" log:parsedAsN3 ?y} => {:answer2 :is ?y}.
+
+# @forAll var:x_0.
+{var:x_0 :p :o} => {:r :s :t}.
+
+1 :p :o.
+
+:my-range  :is [
+    :scope var:scope;
+    :select var:x;
+    :where {var:x a :Thing};
+].
+

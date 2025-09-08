@@ -16,7 +16,8 @@ import tempfile
 # 9. TODO 后果分支ifthenelse。（ 如果是多个独立的结果，应该依次计算概率或者全都发生。）
 # 10. TODO 应该直接计算动作结果对应的那个diff-patch，存储到action-outcomes里。
 # 11. TODO 多个事件可以互斥。 如果同时发生了，会用类似拒绝采样的方法重新采样。所以如果一组互斥事件的概率和太大，算法效率很低。有空改进
-# 12. TODO 允许手动输入自然语言的动作描述。允许手动输入自然语言的事件描述
+# 12. TODO 允许手动输入自然语言的动作描述，语言模型尝试解析到已有动作。如果失败，则尝试创建新动作。
+# 13. TODO 记录事件和动作，以形成历史。某些事件的触发条件可能和历史有关
 
 def write_to_file(n3_string, file_path):
     '''将字符串写入文件'''
@@ -99,8 +100,6 @@ def merge_n3_files(*input_files):
 
 def eye_inference(*n3_strings):
     '''运行EYE推理器，返回推理结果. 输入是n3字符串，输出也是n3字符串'''
-
-
     # 将n3strings写入临时文件
     with tempfile.NamedTemporaryFile(delete=True, mode='w', encoding='utf-8') as temp_file:
         for n3 in n3_strings:
@@ -268,6 +267,7 @@ def main():
                     else:
                         print("无效的选择，请重新输入。")
             else:  
+                print("无可执行动作，跳过。")
                 selected_action = 0
             
             if selected_action == 0 :
@@ -383,13 +383,13 @@ def main():
                 pass
                 print("动作无效果!")
         
-        # 2.2 根据状态， 生成新事件
+        # 2.2 根据状态， 生成新事件，更新世界
 
             # 2.2.1 找到所有可能发生的、最细粒度的事件
 
             # 2.2.2 计算事件的后果并更新世界
 
-        # 
+        # 2.3 根据天赋和物品，修改更新，创建历史
 
                 
 

@@ -1,19 +1,7 @@
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#>.
-@prefix diff: <http://www.w3.org/2004/delta#>.
 
-:当前动作 :后果 {
-    {
-        :self :家境 0.
-    } diff:replacement {
-        :self :家境 3.
-    }.
-}.
-_:e_11 :后果 {
-    {
-        :self :体质 0.
-    } diff:replacement {
-        :self :体质 -2.
-    }.
-}.
+_:e_3 a :事件.
+_:e_4 a :事件.
+_:e_12 a :事件.
+_:e_13 a :事件.
 :_has-sampled :is true.
-_:e_11 :概率 :有时.

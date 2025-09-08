@@ -1,0 +1,16 @@
+:必然事件 :super-class :事件.
+{?x a :必然事件} => {?x :概率 :必然}.
+{?x :概率 :必然} => {?x a :必然事件}.
+
+
+{
+    ?x a :事件;
+        :后果增量 {?s ?prop ?delta}.
+    ?s ?prop ?v. 
+    (?v ?delta) math:sum ?v2
+} => {
+        ?x :后果
+        {
+            {?s ?prop ?v } diff:replacement {?s ?prop ?v2}
+        }
+}.

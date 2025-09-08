@@ -7,181 +7,123 @@
 @prefix list: <http://www.w3.org/2000/10/swap/list#>.
 @prefix string: <http://www.w3.org/2000/10/swap/string#>.
 @prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix var: <http://www.w3.org/2000/10/swap/var#>.
 
+
+# 动作的后果是一个事件。
+:求雨
+    a   :动作;
+    :条件  {:self :拥有天赋 :呼风唤雨};
+    :描述  "祈求降雨";
+    :后果  :下雨;
+.
 
 :跳过
     a   :动作;
-    :前提 true;
+    :条件 {};
     :参数 ();
     :描述 "什么都不做";
 .
 
 :抛硬币
     a   :动作;
-    :前提   true;
+    :条件   {};
     :参数   ();
     :描述   "抛一枚硬币";
-    :后果   {
-            { (100) e:random ?x  } diff:insertion { ( {?x math:greaterThan 49} {:看到  :投掷结果 :正面} {:看到  :投掷结果 :反面} ) log:ifThenElseIn ?scope }
-    };
+    :后果分支 # 后果分支是一个列表，其中的项目是事件，或者是(事件 概率)的二元组。
+        (
+            [:变量替换 {:硬币 :tag :正面}] # tag是一个通用的谓词。
+            [:变量替换 {:硬币 :tag :反面}]
+        )
 .
 
-# log:ifThenElseIn
-:投掷结果 a :临时变量.
 
 :加点
     a   :动作;
-    :参数 (:加点属性 :加点数值); # 可以将具体动作看作类，则它的参数就是其slot，实例就是具体的动作实例。
-    :前提   {:self :可分配点数 ?y. 
-            ?y math:greaterThan 0 };
-    # :后果 {
-    #     {:当前动作 :加点属性 ?p; :加点数值 ?v. :self ?p ?v2. (?v ?v2) math:sum ?v3 } 
-    #         diff:replacement {:self ?p ?v3};
-    #         #diff:deletion {:self ?p ?v2.}.
-    # }
+    :条件   {:self :可分配点数 ?x . # 用?...来表示变量
+            ?x math:greaterThan 0 };
+    :参数 ( # 可以将具体动作看作类，则它的参数就是其slot，实例就是具体的动作实例。
+            [id :加点属性 :var ?加点属性; :取值范围 (:智力 :颜值 :体质 :家境);]
+            [id :加点数值 :var ?加点数值;]
+        ); 
+    :变量增量   {:self ?加点属性 ?加点数值};
+    :参数约束条件  
+            {:self :可分配点数 ?x. ?加点属性 math:largerThan 0. ?加点属性 math:lessThan ?x},
+            {?加点属性 list:in (:智力 :颜值 :体质 :家境)}; # 和用取值范围的写法等价。不过这里更一般。
 .
+#如果一个动作类型没有参数，那么其变量增量等影响直接传递给动作实例。否则需要计算。
+{?a a :动作; :参数 (); :影响 ?y. ?x a ?a. } => {?x :影响 ?y}.
 
-{
-    :当前动作 a :加点.
-    :当前动作 :加点属性 ?prop.
-    :当前动作 :加点数值 ?v. 
-    :self ?prop ?v2.
-    (?v2 ?v ) math:sum ?v3.
-} => {
-    :当前动作 :后果 
-    {
-        {:self ?prop ?v2 } diff:replacement {:self ?prop ?v3}
-    }
+{?a :变量增量 ?g. ?g log:rawType log:Formula } => {?a :影响 (:变量增量 ?g)}. #语法糖？
 
-    # 另一种设计： 计算动作实例的未完全ground的后果。
-    # TODO 但是似乎math:sum在diff:repalcement中会匹配失败？ 
-    # {
-    #     {:self ?prop ?v2. (?v2 ?v) math:sum ?v3 } diff:replacement {:self ?prop ?v3}
-    # }
-}.
+# :加点数值 
+#     :约束条件 [
+#         a :Query;
+#         :select ?y;
+#         :where {:self :可分配点数 ?x. ?y math:largerThan 0. ?y math:lessThan ?x}
+#         #:scope <base.n3>
+# ]. # 和用参数约束的写法等价
+#     :描述  [
+#         a :Query;
+#         :select ?message;
+#         :where {:self :可分配点数 ?x. ("当前可分配点数为" ?x ) string:concatenation ?message} 
+# ].
+
+{:self :可分配点数 ?y. ("当前可分配点数为" ?y ) string:concatenation ?message} => {:加点数值 :提示信息 ?message.}.
+
 
 
 :选择天赋
     a   :动作;
     :参数   (:所选天赋);
-    :前提   {:self  :可选天赋数 ?y. ?y math:greaterThan 0};
-    :后果   {{:当前动作 :所选天赋 ?v  } 
-            diff:insertion {:self :具有天赋 ?v}};
+    :条件   {:self  :可选天赋数 ?x. ?x math:greaterThan 0};
+    :变量增量   {:self :具有天赋 :所选天赋};
 .
 
+# 可选天赋的取值范围比较复杂，需要单独的规则来设定：
 { 
     ?SCOPE e:findall (
         ?x
         {?x a :天赋}
         ?y
     ) .
-    (?y 3) :random-sample ?answer.
+    (?y 3) :random-sample ?answer. #在所有的天赋中随机选取3个。
 } => {:所选天赋 :取值范围 ?answer}.
 
 
 
-# 动作的后果是一个diff图
-# 理论上，应该是动作实例而不是动作类对应一个后果的diff图。因此应该使用规则，说明如何从动作类型和参数计算具体的动作实例的diff. 
-# 下面计算的不是动作实例的后果，而是当前状态下的动作实例的后果。完全ground了。
-
-{
-    ?x a :动作;
-        :后果替换 {?s ?p ?o}
-} => {
-        ?x :后果 
-        {
-            {?s ?prop ?v } diff:replacement {?s ?prop ?o}
-        }
-}.
+# 动作的直接后果是一个diff图
+# 理论上，应该是动作实例而不是动作类对应一个直接后果的diff图。因此应该使用规则，说明如何从动作类型和参数计算具体的动作实例的diff. 
+# 下面计算的不是动作实例的直接后果，而是当前状态下的动作实例的直接后果。完全ground了。
 
 
 
-# 对于无参数的动作类，动作实例的后果可以从类那里继承。
-{
-    :当前动作 a ?action.
-    ?action :后果 ?y.
-} => { :当前动作 :后果 ?y}.
-
-
-
-
-:加点属性 :取值范围 (:智力 :颜值 :体质 :家境). # 取值范围相当于 k:range
-
-{:self :可分配点数 ?y. ("当前可分配点数为" ?y ) string:concatenation ?message} => {:加点数值 :提示信息 ?message.}.
-
-:加点数值 :取值范围 xsd:integer. # 取值范围，相当于 k:constr-range-belongs
-
-#:加点点数 :取值约束条件 (?value {:self :可分配点数 ?y. ?value math:lessThan ?y}) # :取值约束条件 可以看作该动作类的 slot上的constraint
-{
-    :当前动作 a :加点. 
-    :当前动作 :加点数值 ?value. 
-    :self :可分配点数 ?y. 
-    ?value math:greaterThan ?y. 
-    :self :可分配点数 ?z.
-    ("加点不能超出可分配点数。" "当前的可分配点数为" ?z ) string:concatenation ?reason.
-} => {:执行动作 a :Failed; :reason ?reason}.
-
-:吃 a :动作 ;
-    :描述 "你吃下了<<object>>" ;
-    :参数 (:吃的对象);
-    :前提 {
-        :self :拥有物品 ?object .
-        ?object a :食物.
-    } ;
-    :后果 {
-        {:当前动作 :吃的对象 ?v  } 
-            diff:deletion {:self :拥有物品 ?v.}.
-    }
+:吃掉
+    a   :动作;
+    :参数   (:吃的对象);
+    :条件   {:self  :拥有物品  :吃的对象. :吃的对象 a :食物};
+    :语句移除  {:self  :拥有物品  :吃的对象};
 .
-
-{ ?SCOPE e:findall (
-        ?value
-        {:self :拥有物品 ?value. ?value a :食物}
-        ?values
-    ) 
-} => {:吃的对象 :取值范围 ?values}. # 自动推出列表
-
-
-
 
 :赠送
     a   :动作;
-    :参数   (:赠送物 :赠送对象); #所有的参数都是临时变量。
-    :前提   {:self  :拥有物品 ?x};
-    :后果
-        [
-            :移除   {:self :拥有物品  :赠送物};
-            :新增   {:赠送对象  :拥有物品  :赠送物};
+    :参数   (:赠送物 :赠送对象); #所有的参数都是临时变量。类似于 :赠送物 log:equalTo :苹果
+    :条件   {:self  :拥有物品 :赠送物};
+    :语句移除   {:self :拥有物品  :赠送物};
+    :语句新增   {:赠送对象  :拥有物品  :赠送物};
 
-        ]
-
-:服用仙丹
-    a   :动作;
-    :描述 "你服下了仙丹";
-    :前提 {:self :拥有物品 :仙丹 };
-    :后果 
-    {
-        {:self :拥有状态 :患病 }
-            diff:deletion {:self :拥有状态 :患病 }.
-    },
-    {
-        {?scope e:fail {:self :拥有状态 :患病}. :self :体质 ?x. (?x 2) math:sum ?y }
-            diff:replacement {:self :体质 ?y}.
-    }
 .
+
 
 :揍ta
     a   :动作;
     :参数 (:揍的对象);
     :描述 "你狠狠地揍了ta一拳";
-    :前提 {:self!:体质 math:largerThan 5};
-    :后果 {
-            { :当前动作 :揍的对象 ?obj. ?obj :体质 ?x. (?x 2) math:difference ?y } 
-                diff:replacement {?obj :体质 ?y };
-                #diff:deletion {?obj :体质 ?x }
-        } 
+    :条件 {:self :体质 ?x. ?x math:largerThan 5};
+    :变量增量 {:揍的对象 :体质 -2};
 .
 
+:揍的对象 :取值范围 {}.
 {?scope e:findall (?x {:self :认识的人 ?x} ?y)} => {:揍的对象 :取值范围 ?y}.
 
 {?x a :动作. ?x :参数 ?l. ?y list:in ?l. } => {?y a :动作参数}.
@@ -191,8 +133,17 @@
 
 
 
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
+@prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix var: <http://www.w3.org/2000/10/swap/var#>.
 
+@prefix solid: <http://www.w3.org/ns/solid/terms#>.
 
 
 :食物 :super-class :消耗品.
@@ -200,9 +151,27 @@
 :主动物品 :super-class :物品.
 :被动物品 :super-class :物品. 
 
+# 高稀有度的物品优先级更高。同稀有度，排名越靠前的优先级更高。
+
+:蓬莱的不死药  a :食物;
+    :描述 '''
+朦胧的玉瓶中盛着虚幻的光晕。
+传闻中采自东海仙岛的神秘灵药。服下它的人可以跨越生与死的境界，重伤濒死之人亦能立即痊愈，然而代价却是永恒的孤寂。
+''';
+    :稀有度 :橙;
+    :影响 (:变量替换 {:self :死亡 false});
+    :元影响 {
+        {
+            ?x a solid:InsertDeletePatch; solid:inserts {:self :死亡 true}.
+            #{?x solid:inserts {:self :死亡 true}} e:becomes {?x solid:inserts {:self :死亡 false}}.
+        } => true.
+    };
+.
+
 :aptx-4869
     a :食物;
-    :描述 "有一半可能回到8岁，有一半可能死掉";
+    :稀有度 :橙;
+    :描述 "红白相间的药丸。服下它的人有一半可能回到8岁，有一半可能死掉";
     :服用效果 (
         [
             :后果替换  {:self :年龄 8};
@@ -240,11 +209,18 @@
     a :被动物品;
     :名称 "玉佩";
     :描述 "有概率抵挡体质降低，每次成功抵挡有概率碎裂";
+    :元影响 {
+        {
+            :当前变化 :变量增量 {:self :体质 ?v}.
+            ?v math:lessThan 0.
+            {:当前变化 :变量增量 {:self :体质 ?v}.} e:becomes {}.
+        } => true.
+    };
 .
 
 # :self :拥有物品 :玉佩.
 
-:小红的棒棒糖
+:小红给的棒棒糖
     a :食物;
     :稀有度 :橙;
     :描述 "使你拥有的所有的消耗品变成非消耗品";
@@ -259,14 +235,14 @@
 :游戏机
     a   :主动物品;
     :稀有度 :紫;
-    :描述   "打电动的时光总是非常快乐";
+    :描述   "打电动的时候总是非常快乐";
 .
 
 
 :玄铁重剑
     a   :装备;
     :稀有度 :紫;
-    :描述   "传说中的神雕大侠用过的剑, 非常重";
+    :描述   "传说中的神雕大侠用过的剑, 很重";
 .
 
 :任意门
@@ -274,116 +250,207 @@
     :稀有度 :橙;
     :描述   "可以瞬间移动到任何地方";
 .
-@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
 @prefix log: <http://www.w3.org/2000/10/swap/log#> .
-@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
-@prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
+@prefix diff: <http://www.w3.org/2004/delta#>.
+@prefix var: <http://www.w3.org/2000/10/swap/var#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
 
-:必然事件 :super-class :事件.
-{?x a :必然事件} => {?x :概率 :必然}.
-{?x :概率 :必然} => {?x a :必然事件}.
+# 一个完整的影响包括： scope where insert delete 概率值 描述
+#  where insert delete 可以用状态新增、变量增量之类的简写成一个图
+# 概率可以用括号表示
+# 描述可以省略
+[
+    a :影响;
+    :描述 "示例影响";
+    :where {:self :心情 ?z. :self :体力 ?x. (?x 1) math:sum ?y};
+    :insert {:self :心情 ?y};
+    :delete {:self :心情 ?z};
+    :prob 0.9;
+].
 
-# 概率分为 :不可能（0%）、:罕见（5）、:少见（20）、:有时（50）、:常见(80)、:必然（100）. 默认是有时
 
-{?x a :事件. ?scope e:fail {?x :概率 ?y}} => {?x :概率 :有时}.
+
+
+# 概率分为 :不可能（0%）、:罕见（6.25）、:少见/偶尔（25）、:有时（50）、:常见(71)、:必然（100）. 默认是有时
+:概率 :默认值 :有时.
+:因果 :必须属性 :概率.
+
+# 具有触发条件的首因事件可以作为事件链的开端
+{?x a :首因事件} <= {?x a :事件. ?x :条件 ?y}.
+
+:车祸
+    a   :事件;
+    :影响  [
+        :语句新增 {:self :拥有天赋 :大智若愚};
+        :概率 :罕见;
+        :描述 "车祸撞到了头，你因祸得福。";
+    ] ; 
+.
+
+:下雨
+    a   :事件;
+    :描述   "哗啦啦啦……天上下起了大雨";
+    :条件  {};
+    :后果  (:发洪水 :罕见);
+.
+
+:发洪水
+    a   :事件;
+    :描述   "铺天盖地的大洪水淹没了一切";
+    #:前因   (:下雨  :罕见);  # 似然概率p(洪水｜下雨)还是后验概率p(下雨｜洪水)？
+    :后果   (:欠收  :必然), (:被淹死 :有时);
+    # :影响  ({:self :死亡  true} :有时); #将其抽出来变成一个可重用的事件:被淹死，以添加描述 "你被淹死了"
+.
+
+:死亡事件 :super-class :事件.
+
+# 拥有影响的事件可以做为事件因果链的终点。
+:被打死
+    a   :死亡事件;
+    :描述   "你被打死了";
+    :变量替换  {:self :死亡  true} ;
+.
+
+# :变量替换 :domain :事件.
+# :变量增量 :domain :事件.
+# :语句新增 :domain :事件.
+# :语句移除 :domain :事件.
+
+
+# # 可以用下面的语法糖，也可以在py脚本或者推理器中进一步处理
+# {?x :必然变量替换 ?y} => {?x :变量替换 (?y :必然)}.
+# {?x :必然变量增量 ?y} => {?x :变量增量 (?y :必然)}.
+# {?x :必然语句新增 ?y} => {?x :语句新增 (?y :必然)}.
+# {?x :必然语句移除 ?y} => {?x :语句移除 (?y :必然)}.
+# {?x :必然条件 ?y} => {?x :条件 (?y :必然)}.
+# {?x :必然后果 ?y} => {?x :后果 (?y :必然)}.
+# {?x :必然前因 ?y} => {?x :前因 (?y :必然)}.
+
+
+:被淹死
+    a   :死亡事件;
+    :描述   "你被淹死了";
+    :变量替换  {:self :死亡  true} ; # 没有说明概率的，就是必然的
+.
+
+:被烧死
+    a   :死亡事件;
+    :描述   "你被烧死了";
+    :变量替换  {:self :死亡  true} ;
+.
+# 死亡事件如果太多，需要自动抽象出一个事件团，即能够接受死法作为参数的一般死亡事件。
+
+# 前因和条件不一样。前因是另一个事件，条件是一个状态图。例如住在农村是丰收的条件不是前因。
+# 同样，后果和影响不一样。后果是一个事件，影响是一个状态图。
+[
+    a   :因果;
+    :前因   :洪水;
+    :后果   :被淹死;
+    :概率   :有时; # 条件概率
+].
+# 通过 条件、后果、以及因果来表述，三种方式是等价的。
+# 三种方式最终被转化为后果的表示方式。 令两种只是语法糖。
+{?x a :因果; :前因 ?x1; :后果 ?x2; :概率 ?x3} => {?x1 :后果  (?x2 ?x3)}.
+{?x2 :前因    (?x1 ?x3) } => {?x1 :后果  (?x2 ?x3)}.
+# 而后果可以视为用history表达的条件。从而统一所有表示方法。利用history还可以表示延迟触发的事件链。
+{?x2 :条件 ({1 :历史快照   ?g. ?g  e:call {:世界 :当前事件  ?x1} } ?x3)} => {?x1 :后果 (?x2 ?x3)}.
+# TODO 理论上，从对偶角度考虑，多个前因的概率计算方式和多个后果不同，是说必须这些原因都满足才会发生，概率数值表示必须程度。 必须和必然是对偶的。
+# 因此，前因属性的概率值是一个事件之前发生了另一个事件的后验概率。例如，在已知丰收的情况下，家住农村的概率是多少？
+# 利用这种方式可以表达那些必须要满足多个前因才能发生的后果事件。
 
 :丰收
     a :事件;
     :描述 "今年大丰收，而且你家的菜也涨价了";
-    :前提 {:self :住在农村 true };
-    :后果增量 {:self :家境 1};
-    :概率   :有时;
+    :条件 ({:self :住在农村 true } :有时);
+    :变量增量 {:self :家境 1};
 .
 
 :欠收
     a :事件;
     :描述 "今年发生了旱灾/洪水，你家颗粒无收";
-    :前提 {:self :住在农村 true };
-    :后果增量 {:self :家境 -1};
-    :概率   :有时;
-    :互斥事件 :丰收;
+    :条件 ({:self :住在农村 true } :有时);
+    :变量增量 {:self :家境 -1};
+    :互斥 :丰收;
 .
-
-
-# :生成天赋 a :必然事件;
-#     :描述   "生成一组天赋供玩家选择";
-#     :参数   :天赋数量;
-#     :前提   {:self  :可选天赋数 ?x. ?x math:greaterThan 0};
-#     :后果  {
-#         {} diff:replacement {}
-#     }
-# .
-
 
 
 # 事件的后果可以是另一个事件？
-:出生 a  :必然事件;
+:出生 a  :事件;
     :描述 "你出生了！";
-    :前提 {:self :年龄 0}; 
-    :后果替换 {:self :年龄 1};
-    :后果分支  #后果分支是一个列表，其中的事件视为互补
+    :条件 {:self :年龄 0}; 
+    :变量替换 {:self :年龄 1};
+    :后果分支  #后果分支是一个列表，其中的事件视为互斥且互补（概率值被归一化）
         (
-            [:后果替换 {:self :性别 :男}; :概率值 0.5 ]
-            [:后果替换 {:self :性别 :女}; :概率值 0.5 ]
+            [:变量替换 {:self :性别 :男}; :描述 "你是男孩"; ]  #不需要说明概率值0.5，因为会被当作必然事件然后自动归一
+            [:变量替换 {:self :性别 :女}; :描述 "你是女孩"; ]
         )
-
 .
 
-# 这是必然事件
-:过去1年 a :必然事件;
+
+:过去1年 a :事件;
     :描述 "过去了1年";
-    #:参数 :度过的年份;
-    #:前提 {:self :年龄 ?x};
-    :后果增量 {:self :年龄 1};
+    :条件 {}; #总是会发生
+    :变量增量 {:self :年龄 1. :世界 :年份 1};
 .
 
 
+:过去多年 a :事件;
+    :参数 [id :过去的年份 :参数范围  {:过去的年份 log:rawType rdf:integer}];
+    :描述 "过去了[[:过去的年份]]年";
+    :变量增量 {:self :年龄 :过去的年份. :世界 :年份 :过去的年份};
+.
+
+# self作为参数。即所有人都可以患病
 :得了肺炎 
     a :事件;
+    :参数 :病人;
     :父事件 :患病;
-    :前提 {:self :体质 ?x. ?x math:lessThan 3 };
-    :后果增量 {:self :体质 -2};
+    :条件 ({:病人 :体质 ?x. ?x math:lessThan 7. :病人 :家境 ?x. ?x math:lessThan 3.} :常见); #在贫穷的家庭中，孩子得肺炎是很常见的
+    :变量增量 {:病人 :体质 -2};
 .
+
 
 [
     a :事件;
     :描述 "刚学会走路，你意外从桌子上跌落";
-    :前提 {:self :年龄 2};
-    :后果增量 {:self :体质 -2};
+    :条件 ({:self :年龄 ?x. ?x math:lessThan 3. :self :当前动作 :走路 } :少见);
+    :变量增量 {:self :体质 -2};
 ].
 
 
 
-#{?x a :事件. :self :年龄 ?y. ?y math:lessThan 10. :self :体质 ?z. ?z math:lessThan 0} => {?x a :小时候的致死事件}.
-
-{
-    ?x a :事件;
-        :后果替换 {?s ?prop ?o}.
-} => {
-        ?x :后果 
-        {
-            {?s ?prop ?v } diff:replacement {?s ?prop ?o}
-        }
-}.
-
-{
-    ?x a :事件;
-        :后果增量 {?s ?prop ?delta}.
-    ?s ?prop ?v. 
-    (?v ?delta) math:sum ?v2
-} => {
-        ?x :后果
-        {
-            {?s ?prop ?v } diff:replacement {?s ?prop ?v2}
-        }
-}.
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
 
+@prefix solid: <http://www.w3.org/ns/solid/terms#>.
+
+# 天赋可以直接作用在当前变化图中，或者是作用在历史图中的。
+# 即，对patch图的patch？
+# 其实可以将状态看作物理系统的相空间，而将事件和动作看作物理系统的一阶速度，于是天赋和物品就是2阶速度
+
+
+
 :大智若愚   a :天赋;
-    :描述 "智力减少3。此后每当你增加智力时，多增加1点";
+    :描述 "智力减少3。此后每当你增加智力时，额外增加1点";
+    :影响 (:变量增量 {:self :智力 -3});
+    :影响 (:二阶增量 {:self :智力 +1});
+    :元影响 { 
+        {
+            ?x a solid:InsertDeletePatch; solid:inserts {:self :智力 ?v2}.
+            ?v2 math:largerThan 0.   
+            (?v2 1) math:sum ?v3.
+            {?x solid:inserts {:self :智力 ?v2}} e:becomes {?x solid:inserts {:self :智力 ?v3}}
+        } => true.
+    }
 .
+
 
 :百毒不侵   a :天赋;
     :描述 "你不受食物和药品的负面作用影响";
@@ -410,6 +477,8 @@
 
 :临时变量 :super-class :变量. # 临时变量的值在下一个时间步被清除。
 :属性 :super-class :变量.
+
+:当前动作   a   :临时变量. # 例如 :self :当前动作 :跳.
 
 
 :年龄 a :属性;
@@ -521,3 +590,14 @@ _:has-sampled :is false.
 
 {?x :super-class ?y. ?y a ?class} => { ?x a ?class}.
 {?x :super-class ?y. ?u a ?x} => { ?u a ?y}.
+
+
+{?prop :默认值 ?value. ?class :必须属性 ?prop} => {
+    {?x a ?class. ?scope e:fail {?x ?prop ?y}} => {?x ?prop ?value}.
+}.
+
+
+{?x :domain ?y. ?u ?x ?v} => {?u a ?y}.
+{?x :range ?y. ?u ?x ?v} => {?v a ?y}.
+
+# {(?base ?x) :query-result ?z} <= {?x log:semantics {?y a :Query; :select ?s; :where ?w}. ?scope e:findall (?s ?w ?z) } .

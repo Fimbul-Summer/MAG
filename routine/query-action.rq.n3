@@ -1,0 +1,20 @@
+# 查找当前的可行动作。
+@prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#> .
+
+[
+    a :Query;
+    :select ?x;
+    :where {
+            ?x a :动作; 
+                :条件 ?y. 
+            ?SCOPE e:call ?y
+        },
+        {
+            ?x a :动作.
+            ?SCOPE e:fail {?x :条件 ?y}
+        };
+].
+
+

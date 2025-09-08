@@ -1,8 +1,27 @@
 @prefix : <http://semex.sigmanoise.com/r3/life-sim#> .
 
+@prefix solid: <http://www.w3.org/ns/solid/terms#>.
+
+# 天赋可以直接作用在当前变化图中，或者是作用在历史图中的。
+# 即，对patch图的patch？
+# 其实可以将状态看作物理系统的相空间，而将事件和动作看作物理系统的一阶速度，于是天赋和物品就是2阶速度
+
+
+
 :大智若愚   a :天赋;
-    :描述 "智力减少3。此后每当你增加智力时，多增加1点";
+    :描述 "智力减少3。此后每当你增加智力时，额外增加1点";
+    :影响 (:变量增量 {:self :智力 -3});
+    :影响 (:二阶增量 {:self :智力 +1});
+    :元影响 { 
+        {
+            ?x a solid:InsertDeletePatch; solid:inserts {:self :智力 ?v2}.
+            ?v2 math:largerThan 0.   
+            (?v2 1) math:sum ?v3.
+            {?x solid:inserts {:self :智力 ?v2}} e:becomes {?x solid:inserts {:self :智力 ?v3}}
+        } => true.
+    }
 .
+
 
 :百毒不侵   a :天赋;
     :描述 "你不受食物和药品的负面作用影响";
